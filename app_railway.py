@@ -344,12 +344,14 @@ def health():
             'timestamp': datetime.datetime.utcnow().isoformat()
         }), 200
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
+        # Return 200 so Railway doesn't restart, but indicate DB issue
+        logger.warning(f"Health check DB issue: {e}")
         return jsonify({
-            'status': 'unhealthy',
+            'status': 'degraded',
+            'database': 'disconnected',
             'error': str(e),
             'timestamp': datetime.datetime.utcnow().isoformat()
-        }), 503
+        }), 200
 
 # ============== PAGE ROUTES ==============
 
@@ -683,13 +685,22 @@ def server_error(e):
 
 # ============== INITIALIZATION ==============
 
-with app.app_context():
+def init_app():
+    """Initialize the application with database"""
     try:
-        init_db()
-        logger.info("Mission Control initialized successfully")
+        with app.app_context():
+            init_db()
+            logger.info("Mission Control initialized successfully")
+            return True
     except Exception as e:
         logger.error(f"Failed to initialize Mission Control: {e}")
+        return False
+
+# Initialize on startup (but don't fail if DB has issues)
+db_initialized = init_app()
 
 if __name__ == '__main__':
+    if not db_initialized:
+        logger.warning("Starting without database initialization")
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)

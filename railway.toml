@@ -1,12 +1,10 @@
 [build]
-builder = "nixpacks"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "gunicorn app_railway:app --bind 0.0.0.0:$PORT --workers 4 --worker-class gthread --threads 2 --timeout 120 --access-logfile - --error-logfile -"
+startCommand = "gunicorn app_minimal:app --bind 0.0.0.0:${PORT:-8080} --workers 2"
 healthcheckPath = "/health"
-healthcheckTimeout = 100
+healthcheckTimeout = 300
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
-
-[variables]
-PYTHON_VERSION = "3.11"

@@ -1,1 +1,1 @@
-web: gunicorn app_railway:app --bind 0.0.0.0:$PORT --workers 4 --worker-class gthread --threads 2 --timeout 120 --access-logfile - --error-logfile -
+web: gunicorn app_minimal:app --bind 0.0.0.0:${PORT:-8080} --workers 2

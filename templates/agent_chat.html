@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}{{ agent.name }} - Agent Chat - Mission Control{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-with-nav">
+        <a href="{{ url_for('agents') }}" class="back-link">← Back to Agents</a>
+        <h1>💬 Chat with {{ agent.name }}</h1>
+    </div>
+    <p class="subtitle">{{ agent.role }} | Status: <span class="status-badge status-{{ agent.status }}">{{ agent.status }}</span></p>
+</div>
+
+<div class="chat-container">
+    <!-- Chat Messages -->
+    <div class="chat-messages" id="chat-messages">
+        {% if messages %}
+            {% for message in messages|reverse %}
+            <div class="message message-{{ message.direction }}">
+                <div class="message-bubble">
+                    <p>{{ message.content }}</p>
+                    <span class="message-time">{{ message.created_at }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="chat-empty">
+                <p>👋 Start a conversation with {{ agent.name }}</p>
+                <p class="hint">Type a message below to begin</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Chat Input -->
+    <div class="chat-input-container">
+        <form id="chat-form" class="chat-form" onsubmit="return sendMessage(event)">
+            <input type="hidden" id="agent-id" value="{{ agent.id }}">
+            
+            <div class="chat-input-wrapper">
+                <input type="text" 
+                       id="message-input" 
+                       class="chat-input" 
+                       placeholder="Type your message to {{ agent.name }}..."
+                       required
+                       autocomplete="off">
+                
+                <button type="submit" class="btn btn-primary chat-send-btn">
+                    <span class="btn-text">Send</span>
+                    <span class="btn-icon">📤</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Status Toast -->
+<div id="status-toast" class="toast" style="display: none;"></div>
+
+{% block scripts %}
+<script>
+// Send message to agent
+function sendMessage(event) {
+    event.preventDefault();
+    
+    const agentId = document.getElementById('agent-id').value;
+    const input = document.getElementById('message-input');
+    const message = input.value.trim();
+    
+    if (!message) {
+        showToast('Please enter a message', 'error');
+        return false;
+    }
+    
+    // Disable input while sending
+    input.disabled = true;
+    
+    // Show sending state
+    const sendBtn = document.querySelector('.chat-send-btn');
+    const originalText = sendBtn.innerHTML;
+    sendBtn.innerHTML = '<span class="btn-text">Sending...</span>';
+    sendBtn.disabled = true;
+    
+    // Send to API
+    fetch('/api/agent/' + agentId + '/message', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: message })
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(data) {
+        if (data.success) {
+            // Add message to chat immediately
+            addMessageToChat(message, 'outbound');
+            
+            // Clear input
+            input.value = '';
+            
+            showToast('Message sent to ' + data.agent, 'success');
+        } else {
+            showToast(data.error || 'Failed to send message', 'error');
+        }
+    })
+    .catch(function(error) {
+        console.error('Error:', error);
+        showToast('Network error. Please try again.', 'error');
+    })
+    .finally(function() {
+        // Re-enable input
+        input.disabled = false;
+        input.focus();
+        
+        // Restore button
+        sendBtn.innerHTML = originalText;
+        sendBtn.disabled = false;
+    });
+    
+    return false;
+}
+
+// Add message to chat display
+function addMessageToChat(content, direction) {
+    const container = document.getElementById('chat-messages');
+    
+    // Remove empty state if present
+    const emptyState = container.querySelector('.chat-empty');
+    if (emptyState) {
+        emptyState.remove();
+    }
+    
+    // Create message element
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message message-' + direction;
+    
+    const now = new Date().toLocaleString();
+    
+    messageDiv.innerHTML = 
+        '<div class="message-bubble">' +
+            '<p>' + escapeHtml(content) + '</p>' +
+            '<span class="message-time">' + now + '</span>' +
+        '</div>';
+    
+    container.appendChild(messageDiv);
+    
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Show toast notification
+function showToast(message, type) {
+    const toast = document.getElementById('status-toast');
+    toast.textContent = message;
+    toast.className = 'toast toast-' + type;
+    toast.style.display = 'block';
+    
+    setTimeout(function() {
+        toast.style.display = 'none';
+    }, 3000);
+}
+
+// Scroll to bottom of chat on load
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('chat-messages');
+    if (container) {
+        container.scrollTop = container.scrollHeight;
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

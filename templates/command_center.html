@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Command Center - Mission Control{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>🎮 Command Center</h1>
+    <p class="subtitle">Spawn agents and execute commands</p>
+</div>
+
+<div class="command-center-layout">
+    <!-- Spawn Agent Panel -->
+    <div class="panel panel-primary">
+        <div class="panel-header">
+            <h2>🚀 Spawn Agent</h2>
+        </div>
+        
+        <div class="panel-body">
+            <form id="spawn-form" onsubmit="return spawnAgent(event)">
+                <div class="form-group">
+                    <label for="agent-select">Select Agent</label>
+                    <select id="agent-select" class="form-control" required>
+                        <option value="">-- Choose an agent --</option>
+                        {% for agent in agents %}
+                        <option value="{{ agent.id }}" data-name="{{ agent.name }}">
+                            {{ agent.name }} ({{ agent.role }}) - {{ agent.status }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="task-input">Task Description</label>
+                    <textarea id="task-input" 
+                              class="form-control" 
+                              rows="4" 
+                              placeholder="Describe the task you want the agent to perform..."
+                              required></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block btn-lg">
+                    <span class="btn-text">🚀 Spawn Agent</span>
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Quick Commands Panel -->
+    <div class="panel panel-secondary">
+        <div class="panel-header">
+            <h2>⚡ Quick Commands</h2>
+        </div>
+        
+        <div class="panel-body">
+            <div class="quick-commands">
+                <button class="command-btn" onclick="fillTask('Research the latest developments in AI')">
+                    <span class="cmd-icon">🔍</span>
+                    <span class="cmd-text">Research Topic</span>
+                </button>
+                
+                <button class="command-btn" onclick="fillTask('Analyze the current codebase and suggest improvements')">
+                    <span class="cmd-icon">💻</span>
+                    <span class="cmd-text">Code Review</span>
+                </button>
+                
+                <button class="command-btn" onclick="fillTask('Write documentation for the current project')">
+                    <span class="cmd-icon">📝</span>
+                    <span class="cmd-text">Write Docs</span>
+                </button>
+                
+                <button class="command-btn" onclick="fillTask('Check all systems and report status')">
+                    <span class="cmd-icon">🔧</span>
+                    <span class="cmd-text">System Check</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Subagents -->
+<div class="panel panel-full">
+    <div class="panel-header">
+        <h2>📋 Recently Spawned Agents</h2>
+    </div>
+    
+    <div class="panel-body">
+        {% if recent_subagents %}
+        <div class="subagent-list">
+            <div class="subagent-header">
+                <span>Session ID</span>
+                <span>Agent</span>
+                <span>Task</span>
+                <span>Status</span>
+                <span>Created</span>
+            </div>
+            
+            {% for subagent in recent_subagents %}
+            <div class="subagent-item">
+                <span class="subagent-id">{{ subagent.session_id }}</span>
+                <span class="subagent-name">{{ subagent.agent_name }}</span>
+                <span class="subagent-task" title="{{ subagent.task }}">{{ subagent.task[:40] }}{% if subagent.task|length > 40 %}...{% endif %}</span>
+                <span class="subagent-status status-{{ subagent.status }}">{{ subagent.status }}</span>
+                <span class="subagent-time">{{ subagent.created_at }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>No agents spawned yet</p>
+            <p class="hint">Use the form above to spawn your first agent</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Status Toast -->
+<div id="status-toast" class="toast" style="display: none;"></div>
+
+{% block scripts %}
+<script>
+// Fill task input with preset
+function fillTask(task) {
+    document.getElementById('task-input').value = task;
+    document.getElementById('task-input').focus();
+}
+
+// Spawn agent via API
+function spawnAgent(event) {
+    event.preventDefault();
+    
+    const agentSelect = document.getElementById('agent-select');
+    const taskInput = document.getElementById('task-input');
+    
+    const agentId = agentSelect.value;
+    const task = taskInput.value.trim();
+    const agentName = agentSelect.options[agentSelect.selectedIndex].dataset.name;
+    
+    if (!agentId) {
+        showToast('Please select an agent', 'error');
+        return false;
+    }
+    
+    if (!task) {
+        showToast('Please enter a task', 'error');
+        return false;
+    }
+    
+    // Disable form
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<span class="btn-text">🚀 Spawning... </span>';
+    submitBtn.disabled = true;
+    
+    // Send to API
+    fetch('/api/spawn-agent', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            agent_id: parseInt(agentId),
+            task: task
+        })
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(data) {
+        if (data.success) {
+            showToast(data.message, 'success');
+            
+            // Clear form
+            taskInput.value = '';
+            agentSelect.value = '';
+            
+            // Reload page after short delay to show new subagent
+            setTimeout(function() {
+                window.location.reload();
+            }, 1500);
+        } else {
+            showToast(data.error || 'Failed to spawn agent', 'error');
+        }
+    })
+    .catch(function(error) {
+        console.error('Error:', error);
+        showToast('Network error. Please try again.', 'error');
+    })
+    .finally(function() {
+        // Re-enable button
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+    
+    return false;
+}
+
+// Show toast notification
+function showToast(message, type) {
+    const toast = document.getElementById('status-toast');
+    toast.textContent = message;
+    toast.className = 'toast toast-' + type;
+    toast.style.display = 'block';
+    
+    setTimeout(function() {
+        toast.style.display = 'none';
+    }, 3000);
+}
+</script>
+{% endblock %}
+{% endblock %}

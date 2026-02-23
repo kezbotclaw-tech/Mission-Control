@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Timeline - Mission Control{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📅 Timeline</h1>
+    <p class="subtitle">Activity feed and event history</p>
+</div>
+
+<div class="timeline-container">
+    <div class="timeline-filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="system">System</button>
+        <button class="filter-btn" data-filter="message">Messages</button>
+        <button class="filter-btn" data-filter="spawn">Spawns</button>
+    </div>
+    
+    <div class="timeline-list" id="timeline-list">
+        {% for event in events %}
+        <div class="timeline-event event-type-{{ event.event_type }}" data-event-type="{{ event.event_type }}">
+            <div class="timeline-icon">
+                {% if event.event_type == 'system' %}⚙️
+                {% elif event.event_type == 'message' %}💬
+                {% elif event.event_type == 'spawn' %}🚀
+                {% elif event.event_type == 'error' %}❌
+                {% else %}📌{% endif %}
+            </div>
+            
+            <div class="timeline-content">
+                <div class="timeline-header">
+                    <span class="event-type-badge">{{ event.event_type|title }}</span>
+                    <span class="event-time">{{ event.created_at }}</span>
+                </div>
+                
+                <h3 class="event-title">{{ event.title }}</h3>
+                
+                {% if event.description %}
+                <p class="event-description">{{ event.description }}</p>
+                {% endif %}
+                
+                {% if event.agent_name %}
+                <div class="event-agent">
+                    <span class="agent-label">Agent:</span>
+                    <span class="agent-name">{{ event.agent_name }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="timeline-footer">
+        <button class="btn btn-secondary" id="load-more">Load More</button>
+        <button class="btn btn-secondary" onclick="refreshTimeline()">🔄 Refresh</button>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+// Filter timeline events
+document.addEventListener('DOMContentLoaded', function() {
+    var filterBtns = document.querySelectorAll('.filter-btn');
+    
+    filterBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            // Update active state
+            filterBtns.forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            
+            var filter = this.dataset.filter;
+            var events = document.querySelectorAll('.timeline-event');
+            
+            events.forEach(function(event) {
+                if (filter === 'all' || event.dataset.eventType === filter) {
+                    event.style.display = 'flex';
+                } else {
+                    event.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+
+// Refresh timeline
+function refreshTimeline() {
+    fetch('/api/timeline?limit=100')
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success) {
+                var list = document.getElementById('timeline-list');
+                list.innerHTML = '';
+                
+                data.events.forEach(function(event) {
+                    var icon = '📌';
+                    if (event.event_type === 'system') icon = '⚙️';
+                    else if (event.event_type === 'message') icon = '💬';
+                    else if (event.event_type === 'spawn') icon = '🚀';
+                    else if (event.event_type === 'error') icon = '❌';
+                    
+                    var html = '<div class="timeline-event event-type-' + event.event_type + '" data-event-type="' + event.event_type + '"' + 
+                        '><div class="timeline-icon">' + icon + '</div>' +
+                        '<div class="timeline-content">' +
+                            '<div class="timeline-header">' +
+                                '<span class="event-type-badge">' + event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1) + '</span>' +
+                                '<span class="event-time">' + event.created_at + '</span>' +
+                            '</div>' +
+                            '<h3 class="event-title">' + escapeHtml(event.title) + '</h3>';
+                    
+                    if (event.description) {
+                        html += '<p class="event-description">' + escapeHtml(event.description) + '</p>';
+                    }
+                    
+                    if (event.agent_name) {
+                        html += '<div class="event-agent"><span class="agent-label">Agent:</span>' +
+                                '<span class="agent-name">' + escapeHtml(event.agent_name) + '</span></div>';
+                    }
+                    
+                    html += '</div></div>';
+                    list.innerHTML += html;
+                });
+                
+                // Reapply filter
+                var activeFilter = document.querySelector('.filter-btn.active');
+                if (activeFilter) {
+                    activeFilter.click();
+                }
+            }
+        })
+        .catch(function(error) {
+            console.error('Error:', error);
+        });
+}
+
+// Escape HTML
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Auto-refresh every 30 seconds
+setInterval(refreshTimeline, 30000);
+</script>
+{% endblock %}
+{% endblock %}

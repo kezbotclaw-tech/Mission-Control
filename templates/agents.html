@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Agents - Mission Control{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>🤖 Agents</h1>
+    <p class="subtitle">Manage and communicate with your AI agents</p>
+</div>
+
+<div class="agents-container">
+    {% for agent in agents %}
+    <div class="agent-card-full">
+        <div class="agent-card-header">
+            <div class="agent-avatar-large">{{ agent.name[0] }}</div>
+            <div class="agent-title">
+                <h2>{{ agent.name }}</h2>
+                <p class="agent-role">{{ agent.role }}</p>
+            </div>
+            <span class="status-badge status-{{ agent.status }}">{{ agent.status }}</span>
+        </div>
+        
+        <div class="agent-card-body">
+            <p class="agent-description">{{ agent.description }}</p>
+            
+            <div class="agent-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Created:</span>
+                    <span class="meta-value">{{ agent.created_at }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Last Active:</span>
+                    <span class="meta-value">{{ agent.last_active }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="agent-card-footer">
+            <a href="{{ url_for('agent_detail', agent_id=agent.id) }}" class="btn btn-primary">💬 Chat</a>
+            <button class="btn btn-secondary" onclick="showAgentInfo('{{ agent.name }}', '{{ agent.role }}', '{{ agent.description }}')">ℹ️ Info</button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Agent Info Modal -->
+<div id="agent-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <h2 id="modal-title"></h2>
+        <p id="modal-role"></p>
+        <p id="modal-description"></p>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+function showAgentInfo(name, role, description) {
+    document.getElementById('modal-title').textContent = name;
+    document.getElementById('modal-role').textContent = role;
+    document.getElementById('modal-description').textContent = description;
+    document.getElementById('agent-modal').style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('agent-modal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    var modal = document.getElementById('agent-modal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}
+{% endblock %}

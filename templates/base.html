@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Mission Control{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h1>🎯 Mission Control</h1>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.endpoint in ['agents', 'agent_detail'] %}active{% endif %}">
+                    <a href="{{ url_for('agents') }}" class="nav-link">
+                        <span class="nav-icon">🤖</span>
+                        <span class="nav-text">Agents</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.endpoint == 'projects' %}active{% endif %}">
+                    <a href="{{ url_for('projects') }}" class="nav-link">
+                        <span class="nav-icon">📁</span>
+                        <span class="nav-text">Projects</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.endpoint == 'command_center' %}active{% endif %}">
+                    <a href="{{ url_for('command_center') }}" class="nav-link">
+                        <span class="nav-icon">🎮</span>
+                        <span class="nav-text">Command Center</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.endpoint == 'timeline' %}active{% endif %}">
+                    <a href="{{ url_for('timeline') }}" class="nav-link">
+                        <span class="nav-icon">📅</span>
+                        <span class="nav-text">Timeline</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="status-dot online"></span>
+                    <span class="status-text">System Online</span>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for category, message in messages %}
+                            <div class="flash flash-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

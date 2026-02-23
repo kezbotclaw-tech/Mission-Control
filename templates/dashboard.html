@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Mission Control{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <p class="subtitle">System overview and agent status</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">🤖</div>
+        <div class="stat-content">
+            <div class="stat-value">{{ agent_stats.total }}</div>
+            <div class="stat-label">Total Agents</div>
+        </div>
+    </div>
+    
+    <div class="stat-card stat-active">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-content">
+            <div class="stat-value">{{ agent_stats.active }}</div>
+            <div class="stat-label">Active</div>
+        </div>
+    </div>
+    
+    <div class="stat-card stat-idle">
+        <div class="stat-icon">😴</div>
+        <div class="stat-content">
+            <div class="stat-value">{{ agent_stats.idle }}</div>
+            <div class="stat-label">Idle</div>
+        </div>
+    </div>
+    
+    <div class="stat-card stat-busy">
+        <div class="stat-icon">🔥</div>
+        <div class="stat-content">
+            <div class="stat-value">{{ agent_stats.busy }}</div>
+            <div class="stat-label">Busy</div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Agent Cards -->
+    <div class="dashboard-section">
+        <div class="section-header">
+            <h2>🤖 Agents</h2>
+            <a href="{{ url_for('agents') }}" class="btn btn-sm">View All →</a>
+        </div>
+        
+        <div class="agent-grid">
+            {% for agent in agents %}
+            <a href="{{ url_for('agent_detail', agent_id=agent.id) }}" class="agent-card-link">
+                <div class="agent-card">
+                    <div class="agent-header">
+                        <div class="agent-avatar">{{ agent.name[0] }}</div>
+                        <div class="agent-info">
+                            <h3>{{ agent.name }}</h3>
+                            <p class="agent-role">{{ agent.role }}</p>
+                        </div>
+                        <span class="status-badge status-{{ agent.status }}">{{ agent.status }}</span>
+                    </div>
+                    
+                    <p class="agent-description">{{ agent.description }}</p>
+                    
+                    {% if agent.id in recent_messages %}
+                    <div class="agent-last-message">
+                        <span class="message-preview">{{ recent_messages[agent.id].content[:60] }}{% if recent_messages[agent.id].content|length > 60 %}...{% endif %}</span>
+                        <span class="message-time">{{ recent_messages[agent.id].created_at }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Projects Preview -->
+    <div class="dashboard-section">
+        <div class="section-header">
+            <h2>📁 Projects</h2>
+            <a href="{{ url_for('projects') }}" class="btn btn-sm">View All →</a>
+        </div>
+        
+        <div class="projects-list">
+            {% for project in projects[:4] %}
+            <div class="project-item">
+                <div class="project-info">
+                    <div class="project-category-icon category-{{ project.category }}">
+                        {% if project.category == 'youtube' %}▶️
+                        {% elif project.category == 'betting' %}🎲
+                        {% elif project.category == 'f-gas' %}❄️
+                        {% elif project.category == 'trading' %}📈
+                        {% else %}📁{% endif %}
+                    </div>
+                    <div class="project-details">
+                        <h4>{{ project.name }}</h4>
+                        <p>{{ project.description[:50] }}{% if project.description|length > 50 %}...{% endif %}</p>
+                    </div>
+                </div>
+                
+                <div class="project-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ project.progress }}%"></div>
+                    </div>
+                    <span class="progress-text">{{ project.progress }}%</span>
+                </div>
+                
+                <span class="project-status status-{{ project.status }}">{{ project.status }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Timeline Preview -->
+    <div class="dashboard-section">
+        <div class="section-header">
+            <h2>📅 Recent Activity</h2>
+            <a href="{{ url_for('timeline') }}" class="btn btn-sm">View All →</a>
+        </div>
+        
+        <div class="timeline-feed">
+            {% for event in timeline[:8] %}
+            <div class="timeline-item">
+                <div class="timeline-icon event-{{ event.event_type }}">
+                    {% if event.event_type == 'system' %}⚙️
+                    {% elif event.event_type == 'message' %}💬
+                    {% elif event.event_type == 'spawn' %}🚀
+                    {% elif event.event_type == 'error' %}❌
+                    {% else %}📌{% endif %}
+                </div>
+                <div class="timeline-content">
+                    <div class="timeline-title">{{ event.title }}</div>
+                    <div class="timeline-meta">
+                        <span class="timeline-agent">{{ event.agent_name or 'System' }}</span>
+                        <span class="timeline-time">{{ event.created_at }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions">
+    <h3>Quick Actions</h3>
+    <div class="action-buttons">
+        <a href="{{ url_for('command_center') }}" class="btn btn-primary">🎮 Open Command Center</a>
+        <a href="{{ url_for('agents') }}" class="btn btn-secondary">🤖 Manage Agents</a>
+        <a href="{{ url_for('projects') }}" class="btn btn-secondary">📁 View Projects</a>
+    </div>
+</div>
+{% endblock %}

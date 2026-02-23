@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Projects - Mission Control{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📁 Projects</h1>
+    <p class="subtitle">Track progress across all active initiatives</p>
+</div>
+
+<div class="projects-grid">
+    {% for project in projects %}
+    <div class="project-card" data-project-id="{{ project.id }}">
+        <div class="project-card-header">
+            <div class="project-icon category-{{ project.category }}">
+                {% if project.category == 'youtube' %}▶️
+                {% elif project.category == 'betting' %}🎲
+                {% elif project.category == 'f-gas' %}❄️
+                {% elif project.category == 'trading' %}📈
+                {% else %}📁{% endif %}
+            </div>
+            
+            <div class="project-title">
+                <h3>{{ project.name }}</h3>
+                <span class="project-category">{{ project.category|title }}</span>
+            </div>
+            
+            <span class="project-status-badge status-{{ project.status }}">{{ project.status }}</span>
+        </div>
+        
+        <div class="project-card-body">
+            <p class="project-description">{{ project.description }}</p>
+            
+            <div class="progress-section">
+                <div class="progress-header">
+                    <span class="progress-label">Progress</span>
+                    <span class="progress-value" id="progress-text-{{ project.id }}">{{ project.progress }}%</span>
+                </div>
+                
+                <div class="progress-bar-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" 
+                             id="progress-fill-{{ project.id }}"
+                             style="width: {{ project.progress }}%"></div>
+                    </div>
+                    
+                    <input type="range" 
+                           class="progress-slider"
+                           min="0" 
+                           max="100" 
+                           value="{{ project.progress }}"
+                           data-project-id="{{ project.id }}"
+                           onchange="updateProgress({{ project.id }}, this.value)">
+                </div>
+            </div>
+        </div>
+        
+        <div class="project-card-footer">
+            <div class="project-meta">
+                <span class="meta-item">
+                    <span class="meta-label">Updated:</span>
+                    <span class="meta-value">{{ project.updated_at }}</span>
+                </span>
+            </div>
+            
+            <div class="project-actions">
+                <select class="status-select" 
+                        onchange="updateStatus({{ project.id }}, this.value)"
+                        data-project-id="{{ project.id }}">
+                    <option value="active" {% if project.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="paused" {% if project.status == 'paused' %}selected{% endif %}>Paused</option>
+                    <option value="completed" {% if project.status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="archived" {% if project.status == 'archived' %}selected{% endif %}>Archived</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Status Toast -->
+<div id="status-toast" class="toast" style="display: none;"></div>
+
+{% block scripts %}
+<script>
+// Update project progress
+function updateProgress(projectId, progress) {
+    // Update visual elements immediately
+    document.getElementById('progress-fill-' + projectId).style.width = progress + '%';
+    document.getElementById('progress-text-' + projectId).textContent = progress + '%';
+    
+    // Send to API
+    fetch('/api/project/' + projectId + '/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ progress: parseInt(progress) })
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(data) {
+        if (data.success) {
+            showToast('Progress updated', 'success');
+        } else {
+            showToast('Failed to update progress', 'error');
+        }
+    })
+    .catch(function(error) {
+        console.error('Error:', error);
+        showToast('Network error', 'error');
+    });
+}
+
+// Update project status
+function updateStatus(projectId, status) {
+    // Send to API
+    fetch('/api/project/' + projectId + '/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: status })
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(data) {
+        if (data.success) {
+            showToast('Status updated to ' + status, 'success');
+            
+            // Update badge class
+            const card = document.querySelector('[data-project-id="' + projectId + '"]');
+            const badge = card.querySelector('.project-status-badge');
+            badge.className = 'project-status-badge status-' + status;
+            badge.textContent = status;
+        } else {
+            showToast('Failed to update status', 'error');
+        }
+    })
+    .catch(function(error) {
+        console.error('Error:', error);
+        showToast('Network error', 'error');
+    });
+}
+
+// Show toast notification
+function showToast(message, type) {
+    const toast = document.getElementById('status-toast');
+    toast.textContent = message;
+    toast.className = 'toast toast-' + type;
+    toast.style.display = 'block';
+    
+    setTimeout(function() {
+        toast.style.display = 'none';
+    }, 3000);
+}
+</script>
+{% endblock %}
+{% endblock %}
